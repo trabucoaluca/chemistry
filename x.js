@@ -1,4 +1,4 @@
- /*-------ENGINE VIEWPORT--------*/
+   /*-------ENGINE VIEWPORT--------*/
 var Engine = Matter.Engine,
     Render = Matter.Render,
     Composite = Matter.Composite,
@@ -33,6 +33,12 @@ var num_moleculas_unidas;
 
 var vaso_moleculas;
 var vaso_agua;
+
+
+var pega_Default = 0x0001;
+var no_pega = 0x0002;
+
+
 
 /*----------------VARIABLES 2---------------*/
 var co;
@@ -197,11 +203,9 @@ vasos();
 /*--------BOLAS VIEWPORT------------*/
 function bolas_viewport(){
  for(let i = 0; i < total_moleculas; i++){
-    //atomo_rojo = Bodies.circle(280,150, radio_atomo_rojo,{render:{fillStyle:'red',strokeStyle:'red',sprite:{texture:'js/img2/Esfera_Grande.png'}},id:"circulo_rojo_"+[i]});
-    //atomo_blanco = Bodies.circle(((atomo_rojo.position.x) + 5),((atomo_rojo.position.y) + 15),radio_atomo_blanco,{render:{fillStyle:'white',strokeStyle:'black',sprite:{texture:'js/img2/Esfera_2.png'}},id:"circulo_blanco_"+[i]});
-    atomo_rojo = Bodies.circle(280,150, radio_atomo_rojo,{render:{fillStyle:'red',strokeStyle:'red'/*,sprite:{texture:'js/img2/Esfera_Grande.png'}*/}/*,id:"circulo_rojo_"+[i]*/});
-    atomo_blanco = Bodies.circle(((atomo_rojo.position.x) + 5),((atomo_rojo.position.y) + 15),radio_atomo_blanco,{render:{fillStyle:'white',strokeStyle:'black'/*,sprite:{texture:'js/img2/Esfera_2.png'*/}/*},id:"circulo_blanco_"+[i]*/});
-
+    atomo_rojo = Bodies.circle(280,150, radio_atomo_rojo,{render:{fillStyle:'red',strokeStyle:'red',sprite:{texture:'js/img2/Esfera_Grande.png'}},id:"circulo_rojo_"+[i]});
+    atomo_blanco = Bodies.circle(((atomo_rojo.position.x) + 5),((atomo_rojo.position.y) + 15),radio_atomo_blanco,{render:{fillStyle:'white',strokeStyle:'black',sprite:{texture:'js/img2/Esfera_2.png'}},id:"circulo_blanco_"+[i]});
+    
     moleculas_unidas = Body.create({
     parts: [atomo_rojo,atomo_blanco],
     restitution: 1,
@@ -220,6 +224,7 @@ function bolas_viewport(){
     moleculas_unidas.frictionAir = 0;
     moleculas_unidas.inertia = Infinity;
     moleculas_unidas.mass = 1;
+    moleculas_unidas.collisionFilter.mask = pega_Default;
     cambiar_color(valor_value);
 
     array_moleculas_unidas.push(moleculas_unidas);
@@ -275,17 +280,19 @@ $("#slider").slider({
 
         vaso_moleculas = Body.create({
             parts: [barra_izquierda_vaso_moleculas,barra_derecha_vaso_moleculas,barra_inferior_vaso_moleculas],
-            restitution: 0,
-            friction: 0,
-            frictionStatic : 0,
-            frictionAir: 0,
+            restitution: 1,
+            friction: .00002,
+            //frictionStatic : 0,
+            //frictionAir: 0,
             inertia: Infinity,
-            mass: 1,
-            isStatic: true,
+            //mass: 30,
+            isStatic: true
             //angle: 2
             });
+        vaso_moleculas.collisionFilter.category = pega_Default;
+        
         World.add(world,vaso_moleculas);
-        console.log("vaso",vaso_moleculas);
+        console.log("vasos",vaso_moleculas);
 /*
         barra_izquierda_vaso_agua = Bodies.rectangle(200,600,10,200,{isStatic: true});
         barra_derecha_vaso_agua = Bodies.rectangle(600,600,10,200,{isStatic: true});
@@ -303,8 +310,11 @@ $("#slider").slider({
             frictionAir: 0,
             inertia: Infinity,
             mass: 1,
-            isStatic: true
+            isStatic: true,
+            category: pega_Default,
             });
+        vaso_agua.collisionFilter.category = pega_Default;
+        //vaso_agua.collisionFilter.mask = no_pega;
         World.add(world,vaso_agua);
 
         barra_superior_vaso_agua = Bodies.rectangle(435,515,430,10,{isStatic: true,isSensor: true, render:{strokeStyle: 'transparent',fillStyle: 'transparent'}});
@@ -538,13 +548,24 @@ $("#slider").slider({
   var max = "";
 
 function sensor(){
-    var a=0;
-    var b=0;
+    var a = 0;
+    var b = 0;
     var lectura = "";
+    var contador = 0;
+    
+    //var nopega = 0x0003;
+    console.log(num_moleculas_separadas);
+    console.log(num_moleculas_unidas);
+    var tapa = Bodies.rectangle(435,515,430,10,{isStatic: true, render:{strokeStyle: 'green',fillStyle: 'green'}});
+    			tapa.collisionFilter.category = no_pega;
+              	//tapa.collisionFilter.mask = no_pega;
+        				World.add(world,tapa);
     //console.log(array_moleculas_unidas[1]);
-    Events.on(engine, 'collisionStart', function(event) {
+    //console.log(array_moleculas_unidas[0].parts[2]);
+    Events.on(engine, 'collisionEnd', function(event) {
         var pairs = event.pairs;
         //console.log("colicionando");
+        
         for (let i = 0, j = pairs.length; i != j; ++i) {
             var pair = pairs[i];
             //console.log(array_moleculas_unidas[j].bodyA.id);
@@ -553,8 +574,32 @@ function sensor(){
               a=a+1;
               //console.log(pair.bodyA);
               console.log(a);
-              pair.bodyB.render.strokeStyle = "green";
+              //pair.bodyB.collisionFilter.category = pega;
+              for (let h = 0; h < array_moleculas_unidas.length; h++) {
+	              if (array_moleculas_unidas[h].parts[1] === pair.bodyB){
+	              		array_moleculas_unidas[h].collisionFilter.mask = pega_Default | no_pega;
+	              		//Body.setVelocity(array_moleculas_unidas[h],{x: 10, y: 10});
+	              }
+              }
+              //console.log("khe"+pair.bodyA.collisionFilter.mask);
+              //Body.setVelocity( pair.bodyA, {x: 10, y: 10});
+              //pair.bodyA = 
+              //pair.bodyB.render.strokeStyle = "green";
+              if(a == 40){
+        		world.gravity.x = 0;
+				world.gravity.y = 0;
+				for (let h = 0; h < array_moleculas_unidas.length; h++) {
+					array_moleculas_unidas[h].restitution = 1;
+		            array_moleculas_unidas[h].friction =.00002;
+				    array_moleculas_unidas[h].frictionStatic = 0;
+				    array_moleculas_unidas[h].frictionAir = 0;
+		            array_moleculas_unidas[h].inertia = Infinity;
+		            array_moleculas_unidas[h].mass = 30;
+	              Body.setVelocity(array_moleculas_unidas[h],{x: -5, y: 5});
+              	}
+              }
               /*
+
               sub = pair.bodyB.id;
               max = sub.substring(pair.bodyB.id.length,pair.bodyB.id.length-2);
               console.log(pair.bodyB.id);
@@ -569,14 +614,28 @@ function sensor(){
 
               
               for (let h = 0; h < array_moleculas_unidas.length; h++) {
-              	//LA CONDICION DE ABAJO NO LA ESTA REALIZANDO
-              	if (array_moleculas_unidas[h].parts[0] == pair.bodyA) {
-              		console.log("body b",pair.bodyA);
-              		console.log("array",array_moleculas_unidas[h].parts[0]);
-              		//Matter.World.remove(world,array_moleculas_unidas[h].parts[0]);
-              	}
+              	
+              	if (array_moleculas_unidas[h].parts[1] === pair.bodyB && contador < num_moleculas_separadas) {
+              		//console.log("body b",pair.bodyA);
+              		//console.log("array",array_moleculas_unidas[h].parts[0]);
+              		
+              		//num_moleculas_separadas;
+              			
+						Matter.World.remove(world,array_moleculas_unidas[h].parts[0]);
+						contador++;
+              		}
+              	
               }
               
+              /*
+              do{
+              	if(array_moleculas_unidas[h].parts[2] === pair.bodyB){
+              		Matter.World.remove(world,array_moleculas_unidas[h].parts[0]);
+              		l++;
+              	}
+              }
+              while(l < num_moleculas_separadas);
+              */
             }/* else if (pair.bodyB === barra_superior_vaso_agua) {
               a=a+1;
              
